@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, provide, onMounted, onUnmounted } from 'vue'
+import { computed, provide, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Section } from './types'
 import BottomNav from './components/BottomNav.vue'
@@ -11,7 +11,7 @@ import { useGameSession } from './composables/useGameSession'
 const router = useRouter()
 const route = useRoute()
 
-const { stats, wordStats, loaded, load, saveStats, saveWordStats, resetAll } = useStorage()
+const { stats, wordStats, loaded, load, saveStats, saveWordStats, resetAll, syncPull, syncPush } = useStorage()
 const session = useGameSession(stats, wordStats, saveStats, saveWordStats)
 
 const totalAnswered = computed(() => Object.values(stats.value.modules).reduce((a, m) => a + m.answered, 0))
@@ -62,8 +62,13 @@ function handleKeydown(e: KeyboardEvent): void {
   session.handleKeydown(e, route.name as string)
 }
 
+watch([session.done, session.gameOver], ([isDone, isGameOver]) => {
+  if (isDone || isGameOver) syncPush()
+})
+
 onMounted(() => {
   load()
+  syncPull()
   window.addEventListener('keydown', handleKeydown)
 })
 onUnmounted(() => {
